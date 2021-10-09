@@ -1,0 +1,397 @@
+# Devon Griffith, March 8 2018
+#
+# Python
+
+import sys
+import pygame
+import time
+from scripts.UltraColor import *
+from fonts import *
+import pyglet
+from scripts.textures import *
+from scripts.meloonatic_gui import *
+from scripts.Globals import *
+from scripts.NPC import *
+from scripts.Player import *
+from scripts.map_engine import *
+import math
+
+pygame.init()
+
+cSec = 0
+cFrame = 0
+FPS = 0
+delta_time = 0
+
+mapCounter = 0
+
+
+terrain = Map_Engine.load_map("maps/test.map")
+item_locations = Map_Engine.load_items("maps/items1.item")
+randomly_generated_map = Map_Engine.GenerateMap()
+
+tile_size = 32
+
+pyglet.font.add_file('fonts/freesansbold.ttf')
+freesansbold = pyglet.font.load('freesansbold')
+font_size = 20
+fps_font = pygame.font.Font(None, font_size)
+
+bg = pygame.image.load("graphics/sky.png")
+Bg = pygame.Surface(bg.get_size(), pygame.HWSURFACE)
+bg.blit(bg, (0, 0))
+del bg
+
+
+logo_img_temp = pygame.image.load("graphics/logo.png")
+logo_img_temp = pygame.transform.scale(logo_img_temp, (300, 300))  # WIDTH AND HEIGHT ARE 1/4
+logo_img = pygame.Surface(logo_img_temp.get_size(), pygame.HWSURFACE)
+logo_img.blit(logo_img_temp, (0, 0))
+del logo_img_temp
+
+dialog_background = pygame.image.load("graphics/gui/dialog.png")
+Dialog_Background = pygame.Surface(dialog_background.get_size(), pygame.HWSURFACE | pygame.SRCALPHA)
+Dialog_Background.blit(dialog_background, (0, 0))
+Dialog_Background_Width, Dialog_Background_Height = Dialog_Background.get_size()
+del dialog_background
+
+clock = pygame.time.Clock()
+
+
+def find_centre(width, height):
+    centre_x = (width / 2)
+    centre_y = (height / 2)
+    return centre_x, centre_y
+
+
+def show_fps():
+    fps_overlay = fps_font.render(str(FPS), True, Color.Goldenrod)
+    window.blit(fps_overlay, (0, 0))
+
+
+def create_window():
+    global window, window_height, window_width, window_title
+    window_width, window_height = 800, 600  # Change to full screen
+    window_title = "Game"
+    pygame.display.set_caption(window_title)
+    window = pygame.display.set_mode((window_width, window_height), pygame.HWSURFACE | pygame.DOUBLEBUF)
+
+
+def count_fps():
+    global cSec, cFrame, FPS
+
+
+    FPS = clock.get_fps()
+    if FPS > 0:
+        Globals.delta_time = 1 / FPS
+#    if cSec == time.strftime("%s"):
+#        cFrame += 1
+#    else:
+#        FPS = cFrame
+#        cFrame = 0
+#        cSec = time.strftime("%s")
+#        if FPS > 0:
+#            delta_time = 1 / FPS
+
+
+def Play():
+    Globals.scene = "game"
+    pygame.mixer.music.load("music/forest.wav")
+    pygame.mixer.music.play(-1)
+
+
+def Options():
+    Globals.scene = "options"
+
+
+def Return():
+    Globals.scene = "menu"
+
+
+def Exit():
+    global isRunning
+    isRunning = False
+
+create_window()
+
+player1 = Player("Player1")
+player1_w, player1_h = player1.width, player1.height
+#player1_x = (window_width / 2 - player1_w / 2 - Globals.camera_x) / Tiles.Size
+#player1_y = (window_height / 2 - player1_h / 2 - Globals.camera_y) / Tiles.Size
+
+player1_x = Globals.player1_x
+player1_y = Globals.player1_y
+
+player2 = Player("Player2")
+player2_w, player2_h = player2.width, player2.height
+player2_x = (window_width / 2 - player2_w / 2 - Globals.camera_x) / Tiles.Size
+player2_y = (window_height / 2 - player2_h / 2 - Globals.camera_y) / Tiles.Size
+
+
+man1 = Male1(name="Bob", pos=(300, 300), dialog=Dialog(text=[("Hello friend!", "Can you help me get rid of these monsters?"), ("I need your help!", "It would mean a lot to me!")]))
+man2 = Male1(name="Fred", pos=(350, 300), dialog=Dialog(text=[("Hello!", "Please eliminate all the monsters"), ("Please help us!", "I don't know what to do!")]))
+man3 = Male1(name="Ted", pos=(400, 400), dialog=Dialog(text=[("Hello, my name is Ted!", "What's your name?"), ("I used to be an adventurer like you.", "Then I took an arrow to the knee.")]))
+man4 = Male1(name="Jeff", pos=(500, 400), dialog=Dialog(text=[("Nice to meet you!", "please help get rid of the enemies!")]))
+#man5 = Male1(name="Todd", pos=(100, 400))
+#man6 = Male1(name="Frank", pos=(100, 400))
+#man7 = Male1(name="Kyle", pos=(150, 300))
+#man8 = Male1(name="Alex", pos=(175, 200))
+#man9 = Male1(name="Shrek", pos=(200, 200))
+#man10 = Male1(name="Sam", pos=(100, 400))
+
+
+# INITIALIZE MUSIC
+pygame.mixer.music.set_volume(1)
+pygame.mixer.music.load("music/trainyards.wav")
+pygame.mixer.music.play(-1)
+
+
+# INITIALIZE SOUNDS
+btnSound = pygame.mixer.Sound("sounds/Button.wav")
+
+
+btnOnePlayer = Menu.Button(text="One Player", rect=(0, 250, 160, 60), bg=Color.Gray, fg=Color.White, bgr=Color.CornflowerBlue,
+                           tag=("menu", None))
+
+btnTwoPlayer = Menu.Button(text="Two Player", rect=(0, 350, 160, 60), bg=Color.Gray, fg=Color.White, bgr=Color.CornflowerBlue,
+                           tag=("menu", None))
+
+btnOptions = Menu.Button(text="Options", rect=(0, 450, 160, 60), bg=Color.Gray, fg=Color.White, bgr=Color.CornflowerBlue,
+                         tag=("menu", None))
+
+btnReturn = Menu.Button(text="Return", rect=(0, 20, 160, 60), bg=Color.Gray, fg=Color.White, bgr=Color.CornflowerBlue,
+                        tag=("options", None))
+
+btnExit = Menu.Button(text="Exit", rect=(20, 20, 160, 60), bg=Color.Gray, fg=Color.White, bgr=Color.CornflowerBlue,
+                      tag=("menu", None))
+
+btnOnePlayer.Left = window_width / 2 - btnOnePlayer.Width / 2
+btnTwoPlayer.Left = window_width / 2 - btnTwoPlayer.Width / 2
+btnOptions.Left = window_width / 2 - btnOptions.Width / 2
+btnReturn.Left = 20
+btnExit.Left = 20
+
+btnOnePlayer.Command = Play
+btnTwoPlayer.Command = Play
+btnOptions.Command = Options
+btnReturn.Command = Return
+btnExit.Command = Exit
+
+
+#menuTitle = Menu.Text(text="Python RPG", color=Color.Cyan, font=Font.Large)
+#menuTitle.Left, menuTitle.Top = window_width / 2 - menuTitle.Width / 2, 10
+
+
+logo = Menu.Image(bitmap=logo_img, pos=(0, 0))
+logo.Left = window_width / 2 - logo.Width / 2
+logo.Top = 0
+
+
+isRunning = True
+
+while isRunning:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            isRunning = False
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_w and not Globals.dialog_open:
+                Globals.camera_move = 1
+                player1.facing = "north"
+
+            elif event.key == pygame.K_s and not Globals.dialog_open:
+                Globals.camera_move = 2
+                player1.facing = "south"
+
+            elif event.key == pygame.K_a and not Globals.dialog_open:
+                Globals.camera_move = 3
+                player1.facing = "east"
+
+            elif event.key == pygame.K_d and not Globals.dialog_open:
+                Globals.camera_move = 4
+                player1.facing = "west"
+
+
+            elif event.key == pygame.K_i and not Globals.dialog_open:
+                Globals.camera_move = 5
+                player2.facing = "north"
+            elif event.key == pygame.K_k and not Globals.dialog_open:
+                Globals.camera_move = 6
+                player2.facing = "south"
+            elif event.key == pygame.K_j and not Globals.dialog_open:
+                Globals.camera_move = 7
+                player2.facing = "east"
+            elif event.key == pygame.K_l and not Globals.dialog_open:
+                Globals.camera_move = 8
+                player2.facing = "west"
+
+            if event.key == pygame.K_RETURN:
+                if Globals.dialog_open:
+                    # HANDLE NEXT PAGE OF OPEN DIALOG
+                    if Globals.active_dialog.Page < len(Globals.active_dialog.Text) - 1:
+                        Globals.active_dialog.Page += 1
+                    else:
+                        Globals.dialog_open = False
+                        Globals.active_dialog.Page = 0
+                        Globals.active_dialog = None
+
+                    # UNPAUSE ANY PAuSED NPCs
+                        for npc in NPC.AllNPCs:
+                            if not npc.Timer.Active:
+                                npc.Timer.Start()
+
+                else:
+                    # IF DIALOG ISN'T OPEN
+                    for npc in NPC.AllNPCs:
+                        # IS PLAYER IN SPEECH BOUNDS
+                        # PLAYER COORDINATES ARE BY TILE
+                        # NPC COORDINATES ARE BY PIXEL
+                        npc_x = npc.X / Tiles.Size
+                        npc_y = npc.Y / Tiles.Size
+                        if player1_x >= npc_x - 2 and player1_x <= npc_x + 2 and player1_y >= npc_y - 2 and player1_y <= npc_y:
+                            # PLAYER IS NEXT TO AN NPC, HOWEVER IS PLAYER FACING THE NPC??
+                            if player1.facing == "north" and npc_y < player1_y:
+                                Globals.dialog_open = True
+                                Globals.active_dialog = npc.Dialog
+                                npc.Timer.Pause()
+                                npc.walking = False
+                            elif player1.facing == "south" and npc_y > player1_y:
+                                Globals.dialog_open = True
+                                Globals.active_dialog = npc.Dialog
+                                npc.Timer.Pause()
+                                npc.walking = False
+                            elif player1.facing == "east" and npc_x < player1_x:
+                                Globals.dialog_open = True
+                                Globals.active_dialog = npc.Dialog
+                                npc.Timer.Pause()
+                                npc.walking = False
+                            elif player1.facing == "west" and npc_x > player1_x:
+                                Globals.dialog_open = True
+                                Globals.active_dialog = npc.Dialog
+                                npc.Timer.Pause()
+                                npc.walking = False
+
+        elif event.type == pygame.KEYUP:
+            Globals.camera_move = 0
+
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:  # LEFT CLICK
+
+                # HANDLE BUTTON CLICK EVENT
+                for btn in Menu.Button.All:
+                    if btn.Tag[0] == Globals.scene and btn.Rolling:
+                        if btn.Command != None:
+                            btn.Command()  # DO BUTTON EVENT
+                        btnSound.play()
+                        btn.Rolling = False
+                        break  # EXIT LOOP
+
+    # RENDER SCENE
+    if Globals.scene == "game":
+
+        if Globals.camera_move == 1:
+            if not Tiles.Blocked_At((round(player1_x), math.floor(player1_y))):
+                Globals.camera_y += 300 * Globals.delta_time
+                #Globals.player1_y += 300 * Globals.delta_time
+        elif Globals.camera_move == 2:
+            if not Tiles.Blocked_At((round(player1_x), math.ceil(player1_y))):
+                Globals.camera_y -= 300 * Globals.delta_time
+                #Globals.player1_y -= 300 * Globals.delta_time
+        elif Globals.camera_move == 3:
+            if not Tiles.Blocked_At((math.floor(player1_x), round(player1_y))):
+                Globals.camera_x += 300 * Globals.delta_time
+                #Globals.player1_x += 300 * Globals.delta_time
+        elif Globals.camera_move == 4:
+            if not Tiles.Blocked_At((math.ceil(player1_x), round(player1_y))):
+                Globals.camera_x -= 300 * Globals.delta_time
+                #Globals.player1_x -= 300 * Globals.delta_time
+        elif Globals.camera_move == 5:
+            if not Tiles.Blocked_At((round(player2_x), math.floor(player2_y))):
+                Globals.player2_y += 300 * Globals.delta_time
+        elif Globals.camera_move == 6:
+            if not Tiles.Blocked_At((round(player2_x), math.ceil(player2_y))):
+                Globals.player2_y -= 300 * Globals.delta_time
+        elif Globals.camera_move == 7:
+            if not Tiles.Blocked_At((math.floor(player2_x), round(player2_y))):
+                Globals.player2_x += 300 * Globals.delta_time
+        elif Globals.camera_move == 8:
+            if not Tiles.Blocked_At((math.ceil(player2_x), round(player2_y))):
+                Globals.player2_x -= 300 * Globals.delta_time
+
+        player1_x = (window_width / 2 - player1_w / 2 - Globals.camera_x) / Tiles.Size
+        player1_y = (window_height / 2 - player1_h / 2 - Globals.camera_y) / Tiles.Size
+
+        #player1_x = Globals.player1_x / Tiles.Size
+        #player1_y = Globals.player1_y / Tiles.Size
+
+        player2_x = ((window_width / 2 - player2_w / 2 - Globals.camera_x) / Tiles.Size) + 100
+        player2_y = (window_height / 2 - player2_h / 2 - Globals.camera_y) / Tiles.Size
+
+        # Game logic
+
+        # Render graphics
+        centre_x, centre_y = find_centre(window_width, window_height)
+
+        window.blit(Bg, (0, 0))
+        window.fill(Color.Black)
+
+        window.blit(randomly_generated_map, (Globals.camera_x, Globals.camera_y))
+        #window.blit(terrain, (Globals.camera_x, Globals.camera_y))
+        #window.blit(item_locations, (Globals.camera_x, Globals.camera_y))
+
+
+        for npc in NPC.AllNPCs:
+            npc.Render(window)
+
+        if Globals.numPlayers == 1:
+            player1.render(window, (window_width / 2 - player1_w / 2, window_height / 2 - player1_h / 2))
+            # player1.render(window, (100, 100))
+
+        elif Globals.numPlayers == 2:
+            player1.render(window, (window_width / 2 - player1_w / 2, window_height / 2 - player1_h / 2))
+            player2.render(window, (window_width / 2 - player2_w / 2 + 100, window_height / 2 - player2_h / 2))
+
+        if Globals.dialog_open:
+            window.blit(Dialog_Background, (window_width / 2 - Dialog_Background_Width / 2, window_height / 2 - Dialog_Background_Height / 2                - 2))
+
+            # DRAW DIALOG TEXT
+            if Globals.active_dialog != None:
+                lines = Globals.active_dialog.Text[Globals.active_dialog.Page]
+
+                for line in lines:
+                    # DRAW TEXT TO SCREEN
+                    window.blit(Font.Default.render(line, True, Color.White), (130, (window_height - Dialog_Background_Height) + 5 +                                (lines.index(line)) * 25))
+
+#        for t in Tiles.Blocked:
+#            pygame.draw.rect(window, Color.Red, (t[0] * Tiles.Size + Globals.camera_x, t[1] * Tiles.Size + Globals.camera_y, Tiles.Size,                                  Tiles.Size), 2)
+
+    # PROCESS MENU
+    elif Globals.scene == "menu":
+        window.fill(Color.Black)
+
+        logo.Render(window)
+        #menuTitle.Render(window)
+
+        for btn in Menu.Button.All:
+            if btn.Tag[0] == "menu":
+                btnOnePlayer.Render(window)
+                btnTwoPlayer.Render(window)
+                btnOptions.Render(window)
+                btnExit.Render(window)
+
+    elif Globals.scene == "options":
+        window.fill(Color.Black)
+        for btn in Menu.Button.All:
+            if btn.Tag[0] == "options":
+                btnReturn.Render(window)
+
+    show_fps()
+
+    pygame.display.update()
+
+    clock.tick()
+    count_fps()
+
+time.sleep(0.1)
+pygame.QUIT()
+sys.exit()
